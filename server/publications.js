@@ -3,5 +3,5 @@ Meteor.publish('vendors', function() {
 });
 
 Meteor.publish('courses', function() {
-    return Courses.find({}, {sort: {students: -1}});
+    return Courses.find();
 });

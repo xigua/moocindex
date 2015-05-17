@@ -45,6 +45,20 @@ Meteor.methods({
                     }
                 }
             });
+        } else if (vendorname === '极客学院') {
+            url = url.replace('{vendor}', 'jikexueyuan');
+            console.log('start fetching remote results for jikexueyuan.com from ' + url);
+            this.unblock();
+            HTTP.get(url, {headers: {Accept: 'json/application', encoding: null}}, function(error, result) {
+                if(error) {
+                    console.log('http get FAILED!');
+                } else {
+                    var json = JSON.parse(result.content);
+                    if (json.courses !== null && json.courses !== undefined && json.courses.length > 0) {
+                        updateDB(json.courses, '极客学院');
+                    }
+                }
+            });
         }
         return true;
     }
@@ -66,6 +80,9 @@ function updateDB(courses, vendor) {
     var totalStudents = 0;
     var totalCourses = courses.length;
     _.each(courses, function(element, index, list) {
+        if (typeof element.students === 'string') {
+            element.students = parseInt(element.students);
+        }
         if (element.url === null || element.url === undefined) {
             console.log('this course has no url somehow: ' + element);
         } else {
