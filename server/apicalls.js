@@ -59,6 +59,24 @@ Meteor.methods({
                     }
                 }
             });
+        } else if (vendorname === '麦子学院') {
+            url = url.replace('{vendor}', 'maizi');
+            console.log('start fetching remote results for maizi.com from ' + url);
+            this.unblock();
+            HTTP.get(url, {headers: {Accept: 'json/application', encoding: null}}, function(error, result) {
+                if(error) {
+                    console.log('http get FAILED!');
+                } else {
+                    var json = JSON.parse(result.content);
+                    if (json.category !== null && json.category !== undefined && json.category.length > 0) {
+                        var allcourses = new Array();
+                        _.each(json.category, function(cat, index, list) {
+                            allcourses = allcourses.concat(cat.courses);
+                        });
+                        updateDB(allcourses, '麦子学院');
+                    }
+                }
+            });
         }
         return true;
     }
