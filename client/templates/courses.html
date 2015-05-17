@@ -1,3 +1,7 @@
-<template name="courseList">
-
+<template name="allCourses">
+    <div>
+        {{#each courses}}
+            {{> course}}
+        {{/each}}
+    </div>
 </template>

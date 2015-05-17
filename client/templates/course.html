@@ -1,0 +1,10 @@
+<template name="course">
+    <div class="row">
+        <div class="col-md-2"><a href="{{url}}" target="_blank" ><img src="{{thumbnail}}" class="img-thumbnail"></a></div>
+        <div class="col-md-6">
+            <h4><a href="{{url}}" target="_blank">{{name}}</a></h4>
+            <p>{{latest_update}}&nbsp;{{length}}&nbsp;难度: {{difficulty}} 教师: <a href="{{teacher_link}}" target="_blank">{{teacher}}</a></p>
+            <p>{{short_desc}}</p>
+        </div>
+    </div>
+</template>

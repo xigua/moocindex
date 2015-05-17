@@ -1,3 +1,7 @@
 Meteor.publish('vendors', function() {
-    return Vendors.find();
+    return Vendors.find({}, {sort: {totalstudents: -1}});
+});
+
+Meteor.publish('courses', function() {
+    return Courses.find({}, {sort: {students: -1}});
 });

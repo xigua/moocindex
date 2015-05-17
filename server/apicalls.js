@@ -40,12 +40,57 @@ Meteor.methods({
                     console.log('http get FAILED!');
                 } else {
                     var json = JSON.parse(result.content);
-                    _.each(json.courses, function(element, index, list) {
-                        
-                    });
+                    if (json.courses !== null && json.courses !== undefined && json.courses.length > 0) {
+                        updateDB(json.courses, '慕课网');
+                    }
                 }
             });
         }
         return true;
     }
 });
+
+function findExistingCourseMap(vendor) {
+    var courses = Courses.find({vendor: vendor});
+    var result = {};
+    if (courses !== null && courses !== undefined && courses.count() > 0) {
+        courses.forEach(function(course) {
+            result[course.url] = course;
+        });
+    }
+    return result;
+}
+
+function updateDB(courses, vendor) {
+    var existingCourses = findExistingCourseMap(vendor);
+    var totalStudents = 0;
+    var totalCourses = courses.length;
+    _.each(courses, function(element, index, list) {
+        if (element.url === null || element.url === undefined) {
+            console.log('this course has no url somehow: ' + element);
+        } else {
+            var existingCourse = existingCourses[element.url];
+            totalStudents += parseInt(element.students);
+            if (existingCourse === undefined) {
+                element.vendor = vendor;
+                Courses.insert(element);
+                console.log('inserting a new record to db.');
+            } else {
+                Courses.update(existingCourse, {$set: {
+                    students: element.students,
+                    length: element.length,
+                    latest_update: element.latest_update
+                }});
+                console.log('updating a record in db.');
+            }
+        }
+    });
+
+    var thisVendor = Vendors.findOne({name: vendor});
+    if (thisVendor !== null && thisVendor !== undefined) {
+        Vendors.update(thisVendor, {$set: {
+            totalcourse: totalCourses,
+            totalstudents: totalStudents
+        }});
+    }
+}
