@@ -1,5 +1,5 @@
 <template name="allCourses">
-    <h4>共检索到 {{courseCount}} 个课程</h4>
+    <h4>共检索到 {{totalCount}} 个课程, 显示其中的前 {{courseCount}} 个。</h4>
     <div>
         {{#each courses}}
             {{> course}}

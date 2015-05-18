@@ -6,6 +6,7 @@ Meteor.publish('searchCourses', function(searchText, limit) {
     // second paramter 'i' indicates that we want our regular expression to be case-insensitive.
     var filter = new RegExp(searchText, 'i');
     var totalCount = Courses.find({name: filter}).count();
+    Counts.publish(this, 'totalCount', Courses.find({name: filter}));
     if (limit >= totalCount) {
         limit = 0;
     }

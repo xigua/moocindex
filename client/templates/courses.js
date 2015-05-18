@@ -5,6 +5,10 @@ Template.allCourses.helpers({
 
     courseCount: function() {
         return Courses.find().count();
+    },
+
+    totalCount: function() {
+        return Counts.get('totalCount');
     }
 });
 
