@@ -7,14 +7,10 @@ Template.search.events({
     "keyup #search-box": _.throttle(function(ev) {
         var searchText = $('#search-box').val();
         Session.set('searchText', searchText);
-    }, 1000)
+        Session.set('itemsLimit', 20);
+    }, 200)
 });
 
 Template.search.rendered = function() {
     Session.set('searchText', '');
 };
-
-//Tracker.autorun(function() {
-//    var searchText = Session.get('searchText');
-//    Meteor.subscribe('searchCourses', searchText);
-//});
