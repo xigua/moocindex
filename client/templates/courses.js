@@ -5,12 +5,6 @@ Template.allCourses.helpers({
 
     courseCount: function() {
         return Courses.find().count();
-    },
-
-    moreResults: function() {
-        // If, once the subscription is ready, we have less rows than we
-        // asked for, we've got all the rows in the collection.
-        return !(Courses.find().count() < Session.get("itemsLimit"));
     }
 });
 
@@ -27,7 +21,7 @@ Template.allCourses.created = function() {
 Template.allCourses.rendered = function() {
     // is triggered every time we scroll
     $(window).scroll(function() {
-        if ($(window).scrollTop() + $(window).height() > $(document).height() - 100) {
+        if ($(window).scrollTop() + $(window).height() > $(document).height() - 50) {
             incrementLimit();
         }
     });

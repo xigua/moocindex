@@ -3,11 +3,12 @@ Meteor.publish('vendors', function() {
 });
 
 Meteor.publish('searchCourses', function(searchText, limit) {
-    if (limit > Courses.find().count()) {
+    // second paramter 'i' indicates that we want our regular expression to be case-insensitive.
+    var filter = new RegExp(searchText, 'i');
+    var totalCount = Courses.find({name: filter}).count();
+    if (limit >= totalCount) {
         limit = 0;
     }
 
-    // second paramter 'i' indicates that we want our regular expression to be case-insensitive.
-    var filter = new RegExp(searchText, 'i');
     return Courses.find({name: filter}, {sort: {students: -1}, limit: limit});
 });

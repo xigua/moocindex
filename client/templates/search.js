@@ -6,8 +6,10 @@ Template.search.events({
 
     "keyup #search-box": _.throttle(function(ev) {
         var searchText = $('#search-box').val();
-        Session.set('searchText', searchText);
-        Session.set('itemsLimit', 20);
+        if (searchText.length > 1) {
+            Session.set('searchText', searchText);
+            Session.set('itemsLimit', 20);
+        }
     }, 200)
 });
 
