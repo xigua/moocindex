@@ -16,3 +16,6 @@ npm-container
 gb96:zlib
 sacha:spin
 tmeasday:publish-counts
+percolate:synced-cron
+momentjs:moment
+meteorhacks:kadira

@@ -28,6 +28,12 @@
     }
 });*/
 
+var rawVendorsList = {
+    '慕课网': 'imooc',
+    '极客学院': 'jikexueyuan',
+    '麦子学院': 'maizi'
+}
+
 Meteor.methods({
     fetchFromService: function(vendorname) {
         var url = "http://menus.zmenu.com/parsehub/{vendor}.api.json";
@@ -82,6 +88,25 @@ Meteor.methods({
     }
 });
 
+function updateStatsCron() {
+    var url = "http://menus.zmenu.com/parsehub/{vendor}.api.json";
+    for (key in rawVendorsList) {
+        var value = rawVendorsList[key];
+        console.log('start fetching remote results for ' + key + ' from ' + url);
+        this.unblock();
+        HTTP.get(url, {headers: {Accept: 'json/application', encoding: null}}, function(error, result) {
+            if(error) {
+                console.log('http get FAILED!');
+            } else {
+                var json = JSON.parse(result.content);
+                if (json.courses !== null && json.courses !== undefined && json.courses.length > 0) {
+                    updateDB(json.courses, key);
+                }
+            }
+        });
+    }
+}
+
 function findExistingCourseMap(vendor) {
     var courses = Courses.find({vendor: vendor});
     var result = {};
@@ -97,6 +122,7 @@ function updateDB(courses, vendor) {
     var existingCourses = findExistingCourseMap(vendor);
     var totalStudents = 0;
     var totalCourses = courses.length;
+    var now = moment().utc();
     _.each(courses, function(element, index, list) {
         if (typeof element.students === 'string') {
             element.students = parseInt(element.students);
@@ -108,24 +134,110 @@ function updateDB(courses, vendor) {
             totalStudents += parseInt(element.students);
             if (existingCourse === undefined) {
                 element.vendor = vendor;
+                element.createdAt = now.toDate();
+                element.lastModifiedAt = now.toDate();
                 Courses.insert(element);
                 console.log('inserting a new record to db.');
             } else {
                 Courses.update(existingCourse, {$set: {
                     students: element.students,
                     length: element.length,
+                    lastModifiedAt: now.toDate(),
                     latest_update: element.latest_update
                 }});
                 console.log('updating a record in db.');
             }
+
+            updateCourseHistory(element);
         }
     });
 
     var thisVendor = Vendors.findOne({name: vendor});
     if (thisVendor !== null && thisVendor !== undefined) {
         Vendors.update(thisVendor, {$set: {
-            totalcourse: totalCourses,
-            totalstudents: totalStudents
+            totalCourses: totalCourses,
+            totalStudents: totalStudents,
+            lastModifiedAt: now
         }});
+    }
+
+    updateVendorHistory(vendor, totalCourses, totalStudents);
+}
+
+function updateVendorHistory(vendor, totalCourses, totalStudents) {
+    var now = moment().utc();
+    var todaystr = now.format('YYYY-MM-DD');
+    var yesterday = now.subtract(1, 'days');
+    var yesterdaystr = yesterday.format('YYYY-MM-DD');
+
+    // first try to find out the record for today, if exists, which means it's not the first time it's run today
+    var existingHistory = VendorHistory.findOne({name: vendor, day: todaystr});
+
+    // secondly try to find out yesterday's record, if exists, then we can calculate the difference
+    var yesterdayHistory = VendorHistory.findOne({name: vendor, day: yesterdaystr});
+
+    // thirdly either insert a new record in db or update the record
+    var newCourses = 0, newStudents = 0;
+    if (yesterdayHistory !== null && yesterdayHistory !== undefined) {
+        newCourses = totalCourses - yesterdayHistory.totalCourses;
+        newStudents = totalStudents - yesterdayHistory.totalStudents;
+    }
+    if (existingHistory === null || existingHistory === undefined) {
+        VendorHistory.insert({
+            name: vendor,
+            createAt: now.toDate(),
+            lastModifiedAt: now.toDate(),
+            day: todaystr,
+            totalCourses: totalCourses,
+            totalStudents: totalStudents,
+            newCourses: newCourses,
+            newStudents: newStudents
+        });
+    } else {
+        VendorHistory.update(existingHistory, {$set: {
+            lastModifiedAt: now.toDate(),
+            day: todaystr,
+            totalCourses: totalCourses,
+            totalStudents: totalStudents,
+            newCourses: newCourses,
+            newStudents: newStudents
+        }})
+    }
+}
+
+function updateCourseHistory(course) {
+    var now = moment().utc();
+    var todaystr = now.format('YYYY-MM-DD');
+    var yesterday = now.subtract(1, 'days');
+    var yesterdaystr = yesterday.format('YYYY-MM-DD');
+
+    // first try to find out the record for today, if exists, which means it's not the first time it's run today
+    var existingHistory = CourseHistory.findOne({url: course.url, day: todaystr});
+
+    // secondly try to find out yesterday's record, if exists, then we can calculate the difference
+    var yesterdayHistory = CourseHistory.findOne({url: course.url, day: yesterdaystr});
+
+    // thirdly either insert a new record in db or update the record
+    var newStudents = 0;
+    if (yesterdayHistory !== null && yesterdayHistory !== undefined) {
+        newStudents = course.students - yesterdayHistory.students;
+    }
+    if (existingHistory === null || existingHistory === undefined) {
+        CourseHistory.insert({
+            vendor: course.vendor,
+            url: course.url,
+            createAt: now.toDate(),
+            lastModifiedAt: now.toDate(),
+            day: todaystr,
+            students: course.students,
+            newStudents: newStudents
+        });
+    } else {
+        CourseHistory.update(existingHistory, {$set: {
+            lastModifiedAt: now.toDate(),
+            day: todaystr,
+            students: course.students,
+            newStudents: newStudents
+        }})
     }
 }
