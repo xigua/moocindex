@@ -2,7 +2,7 @@ SyncedCron.add({
     name: 'daily get mooc site stats',
     schedule: function(parser) {
         // parser is a later.parse object
-        return parser.text('at 3:47 pm');
+        return parser.text('at 4:36 pm');
     },
     job: function() {
         updateStatsCron();
