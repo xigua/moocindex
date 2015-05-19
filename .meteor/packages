@@ -19,3 +19,4 @@ tmeasday:publish-counts
 percolate:synced-cron
 momentjs:moment
 meteorhacks:kadira
+chart:chart
