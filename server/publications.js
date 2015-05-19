@@ -13,3 +13,9 @@ Meteor.publish('searchCourses', function(searchText, limit) {
 
     return Courses.find({name: filter}, {sort: {students: -1}, limit: limit});
 });
+
+Meteor.publish('pastweekVendorHistory', function() {
+    var now = moment().utc();
+    var sevendaysago = now.subtract(7, 'days');
+    return VendorHistory.find({createAt: {$gte: sevendaysago.toDate()}});
+})
