@@ -22,4 +22,8 @@ Meteor.publish('searchCourses', function(searchText, limit) {
 
 Meteor.publish('vendorCharts', function() {
     return VendorCharts.find();
-})
+});
+
+Meteor.publish('newStudentsChart', function() {
+    return VendorCharts.find({charttype: 'linechart', range: '7days', type: 'newCourses'});
+});

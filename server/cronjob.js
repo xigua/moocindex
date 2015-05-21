@@ -2,7 +2,7 @@ SyncedCron.add({
     name: 'daily get mooc site stats',
     schedule: function(parser) {
         // parser is a later.parse object
-        return parser.text('at 2:10 pm');
+        return parser.text('at 0:36 pm');
     },
     job: function() {
         console.log('start running cron job');
@@ -14,11 +14,36 @@ SyncedCron.add({
     }
 });
 
-defaultColors = {
-    '慕课网': "rgba(20,20,220,",
-    '极客学院': "rgba(151, 0, 205,",
-    '麦子学院': "rgba(110, 149, 0,"
-}
+var highchart_chart = {
+    plotBackgroundColor: null,
+    plotBorderWidth: 1,
+    plotShadow: true
+};
+
+var highchart_title = {
+    text: '每日新增课程数',
+    floating: false,
+    margin: 10,
+    style: {"color": "#330000"}
+};
+
+var highchart_tooltip = {
+    pointFormat: '<span style="color:{point.color}">\u25CF</span> {series.name}: <b>{point.y}</b><br/>',
+    followPointer: false,
+    headerFormat: ""
+};
+
+var highchart_plotOptions = {
+    line: {
+        allowPointSelect: true,
+            cursor: 'pointer',
+            dataLabels: {
+            enabled: false,
+            format: '<b>{point.name}</b>: {y}',
+            connectorColor: 'silver'
+        }
+    }
+};
 
 function generateCharts() {
     var now = moment().utc();
@@ -38,30 +63,18 @@ function generateCharts() {
             var datapoint1 = datasets1[element.name];
             if (!datapoint1) {
                 datapoint1 = {
-                    label: element.name,
+                    name: element.name,
                     data: new Array()
                 };
-                datapoint1.fillColor = defaultColors[element.name] + " 0.2)";
-                datapoint1.strokeColor = defaultColors[element.name] + " 1)";
-                datapoint1.pointColor = defaultColors[element.name] + " 1)";
-                datapoint1.pointStrokeColor = "#fff";
-                datapoint1.pointHighlightFill = "#fff";
-                datapoint1.pointHighlightStroke = defaultColors[element.name] + " 1)";
                 datasets1[element.name] = datapoint1;
             }
             datapoint1.data.push(element.newCourses);
             var datapoint2 = datasets2[element.name];
             if (!datapoint2) {
                 datapoint2 = {
-                    label: element.name,
+                    name: element.name,
                     data: new Array()
                 };
-                datapoint2.fillColor = datapoint1.fillColor;
-                datapoint2.strokeColor = datapoint1.strokeColor;
-                datapoint2.pointColor = datapoint1.pointColor;
-                datapoint2.pointStrokeColor = datapoint1.pointStrokeColor;
-                datapoint2.pointHighlightFill = datapoint1.pointHighlightFill;
-                datapoint2.pointHighlightStroke = datapoint1.pointHighlightStroke;
                 datasets2[element.name] = datapoint2;
             }
             datapoint2.data.push(element.newStudents);
@@ -72,14 +85,21 @@ function generateCharts() {
             range: '7days',
             type: 'newCourses',
             data: {
-                labels: labels,
-                datasets: new Array()
+                chart: highchart_chart,
+                title: highchart_title,
+                tooltip: highchart_tooltip,
+                xAxis: {
+                    categories: labels
+                },
+                plotOptions: highchart_plotOptions,
+                series: new Array()
             }
         };
 
         for (key in datasets1) {
-            newcourseChart.data.datasets.push(datasets1[key]);
+            newcourseChart.data.series.push(datasets1[key]);
         }
+        newcourseChart.data.tooltip.valueSuffix = '新课程';
 
         VendorCharts.upsert({charttype: newcourseChart.charttype, range: newcourseChart.range, type: newcourseChart.type}, newcourseChart);
 
@@ -88,44 +108,28 @@ function generateCharts() {
             range: '7days',
             type: 'newStudents',
             data: {
-                labels: labels,
-                datasets: new Array()
+                chart: highchart_chart,
+                title: highchart_title,
+                tooltip: highchart_tooltip,
+                xAxis: {
+                    categories: labels
+                },
+                plotOptions: highchart_plotOptions,
+                series: new Array()
             }
         }
 
+        newstudentChart.data.title.text = '每日新增总学习人次';
+        newstudentChart.data.tooltip.valueSuffix = '学习人次';
+
         for (key in datasets2) {
-            newstudentChart.data.datasets.push(datasets2[key]);
+            newstudentChart.data.series.push(datasets2[key]);
         }
 
         VendorCharts.upsert({charttype: newstudentChart.charttype, range: newstudentChart.range, type: newstudentChart.type}, newstudentChart);
     }
 }
 
-var data = {
-    labels: ["January", "February", "March", "April", "May", "June", "July"],
-    datasets: [
-        {
-            label: "My First dataset",
-            fillColor: "rgba(220,220,220,0.2)",
-            strokeColor: "rgba(220,220,220,1)",
-            pointColor: "rgba(220,220,220,1)",
-            pointStrokeColor: "#fff",
-            pointHighlightFill: "#fff",
-            pointHighlightStroke: "rgba(220,220,220,1)",
-            data: [65, 59, 80, 81, 56, 55, 40]
-        },
-        {
-            label: "My Second dataset",
-            fillColor: "rgba(151,187,205,0.2)",
-            strokeColor: "rgba(151,187,205,1)",
-            pointColor: "rgba(151,187,205,1)",
-            pointStrokeColor: "#fff",
-            pointHighlightFill: "#fff",
-            pointHighlightStroke: "rgba(151,187,205,1)",
-            data: [28, 48, 40, 19, 86, 27, 90]
-        }
-    ]
-};
 var rawVendorsList = {
     '慕课网': 'http://menus.zmenu.com/parsehub/imooc.api.json',
     '极客学院': 'http://menus.zmenu.com/parsehub/jikexueyuan.api.json',
@@ -210,7 +214,7 @@ Meteor.methods({
 function findExistingCourseMap(vendor) {
     var courses = Courses.find({vendor: vendor});
     var result = {};
-    if (courses !== null && courses !== undefined && courses.count() > 0) {
+    if (courses && courses.count() > 0) {
         courses.forEach(function(course) {
             result[course.url] = course;
         });
@@ -228,17 +232,17 @@ function updateDB(courses, vendor) {
         if (element === undefined) {
             console.log('somehow element is undefined.');
         } else {
-            if (element.students === null || element.students === undefined) {
+            if (!element.students) {
                 element.students = 0;
             } else if (typeof element.students === 'string') {
                 element.students = parseInt(element.students);
             }
-            if (element.url === null || element.url === undefined) {
+            if (!element.url) {
                 console.log('this course has no url somehow: ' + element.name + " " + element.students);
             } else {
                 var existingCourse = existingCourses[element.url];
                 totalStudents += parseInt(element.students);
-                if (existingCourse === undefined) {
+                if (!existingCourse) {
                     element.vendor = vendor;
                     element.createdAt = now.toDate();
                     element.lastModifiedAt = now.toDate();
@@ -260,7 +264,7 @@ function updateDB(courses, vendor) {
     });
 
     var thisVendor = Vendors.findOne({name: vendor});
-    if (thisVendor !== null && thisVendor !== undefined) {
+    if (thisVendor) {
         Vendors.update(thisVendor, {$set: {
             totalCourses: totalCourses,
             totalStudents: totalStudents,
