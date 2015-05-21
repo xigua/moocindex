@@ -1,3 +1,3 @@
 Meteor.subscribe("vendors");
 
-Meteor.subscribe('pastweekVendorHistory');
+Meteor.subscribe('vendorCharts');

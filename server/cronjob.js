@@ -2,33 +2,154 @@ SyncedCron.add({
     name: 'daily get mooc site stats',
     schedule: function(parser) {
         // parser is a later.parse object
-        return parser.text('at 4:36 pm');
+        return parser.text('at 2:10 pm');
     },
     job: function() {
-        updateStatsCron();
+        console.log('start running cron job');
+        for (key in rawVendorsList) {
+            var url = rawVendorsList[key];
+            updateStat(key, url);
+        }
+        generateCharts();
     }
 });
 
+defaultColors = {
+    '慕课网': "rgba(20,20,220,",
+    '极客学院': "rgba(151, 0, 205,",
+    '麦子学院': "rgba(110, 149, 0,"
+}
+
+function generateCharts() {
+    var now = moment().utc();
+    var sevendaysago = now.subtract(7, 'days');
+    var historydata = VendorHistory.find({createAt: {$gte: sevendaysago.toDate()}});
+
+    // first round get all
+    console.log(historydata.count());
+    if (historydata.count() > 0) {
+        var labels = new Array();
+        var datasets1 = {};
+        var datasets2 = {};
+        historydata.forEach(function(element) {
+            if (labels.indexOf(element.day) === -1) {
+                labels.push(element.day);
+            }
+            var datapoint1 = datasets1[element.name];
+            if (!datapoint1) {
+                datapoint1 = {
+                    label: element.name,
+                    data: new Array()
+                };
+                datapoint1.fillColor = defaultColors[element.name] + " 0.2)";
+                datapoint1.strokeColor = defaultColors[element.name] + " 1)";
+                datapoint1.pointColor = defaultColors[element.name] + " 1)";
+                datapoint1.pointStrokeColor = "#fff";
+                datapoint1.pointHighlightFill = "#fff";
+                datapoint1.pointHighlightStroke = defaultColors[element.name] + " 1)";
+                datasets1[element.name] = datapoint1;
+            }
+            datapoint1.data.push(element.newCourses);
+            var datapoint2 = datasets2[element.name];
+            if (!datapoint2) {
+                datapoint2 = {
+                    label: element.name,
+                    data: new Array()
+                };
+                datapoint2.fillColor = datapoint1.fillColor;
+                datapoint2.strokeColor = datapoint1.strokeColor;
+                datapoint2.pointColor = datapoint1.pointColor;
+                datapoint2.pointStrokeColor = datapoint1.pointStrokeColor;
+                datapoint2.pointHighlightFill = datapoint1.pointHighlightFill;
+                datapoint2.pointHighlightStroke = datapoint1.pointHighlightStroke;
+                datasets2[element.name] = datapoint2;
+            }
+            datapoint2.data.push(element.newStudents);
+        });
+
+        var newcourseChart = {
+            charttype: 'linechart',
+            range: '7days',
+            type: 'newCourses',
+            data: {
+                labels: labels,
+                datasets: new Array()
+            }
+        };
+
+        for (key in datasets1) {
+            newcourseChart.data.datasets.push(datasets1[key]);
+        }
+
+        VendorCharts.upsert({charttype: newcourseChart.charttype, range: newcourseChart.range, type: newcourseChart.type}, newcourseChart);
+
+        var newstudentChart = {
+            charttype: 'linechart',
+            range: '7days',
+            type: 'newStudents',
+            data: {
+                labels: labels,
+                datasets: new Array()
+            }
+        }
+
+        for (key in datasets2) {
+            newstudentChart.data.datasets.push(datasets2[key]);
+        }
+
+        VendorCharts.upsert({charttype: newstudentChart.charttype, range: newstudentChart.range, type: newstudentChart.type}, newstudentChart);
+    }
+}
+
+var data = {
+    labels: ["January", "February", "March", "April", "May", "June", "July"],
+    datasets: [
+        {
+            label: "My First dataset",
+            fillColor: "rgba(220,220,220,0.2)",
+            strokeColor: "rgba(220,220,220,1)",
+            pointColor: "rgba(220,220,220,1)",
+            pointStrokeColor: "#fff",
+            pointHighlightFill: "#fff",
+            pointHighlightStroke: "rgba(220,220,220,1)",
+            data: [65, 59, 80, 81, 56, 55, 40]
+        },
+        {
+            label: "My Second dataset",
+            fillColor: "rgba(151,187,205,0.2)",
+            strokeColor: "rgba(151,187,205,1)",
+            pointColor: "rgba(151,187,205,1)",
+            pointStrokeColor: "#fff",
+            pointHighlightFill: "#fff",
+            pointHighlightStroke: "rgba(151,187,205,1)",
+            data: [28, 48, 40, 19, 86, 27, 90]
+        }
+    ]
+};
 var rawVendorsList = {
     '慕课网': 'http://menus.zmenu.com/parsehub/imooc.api.json',
     '极客学院': 'http://menus.zmenu.com/parsehub/jikexueyuan.api.json',
     '麦子学院': 'http://menus.zmenu.com/parsehub/maizi.api.json'
 }
 
-function updateStatsCron() {
-    console.log('start running cron job');
-    for (key in rawVendorsList) {
-        var url = rawVendorsList[key];
-        console.log('start fetching remote results for ' + key + ' from ' + url);
-        try {
-            var result = HTTP.get(url, {headers: {Accept: 'json/application', encoding: null}});
-            var json = JSON.parse(result.content);
-            if (json.courses !== null && json.courses !== undefined && json.courses.length > 0) {
-                updateDB(json.courses, key);
+function updateStat(key, url) {
+    console.log('start fetching remote results for ' + key + ' from ' + url);
+    try {
+        var result = HTTP.get(url, {headers: {Accept: 'json/application', encoding: null}});
+        var json = JSON.parse(result.content);
+        if (key === '麦子学院') {
+            if (json.category !== null && json.category !== undefined && json.category.length > 0) {
+                var allcourses = new Array();
+                _.each(json.category, function(cat, index, list) {
+                    allcourses = allcourses.concat(cat.courses);
+                });
+                updateDB(allcourses, key);
             }
-        } catch (e) {
-            console.log('http get FAILED!');
+        } else if (json.courses !== null && json.courses !== undefined && json.courses.length > 0) {
+            updateDB(json.courses, key);
         }
+    } catch (e) {
+        console.log('http get FAILED!' + e);
     }
 }
 
@@ -102,32 +223,39 @@ function updateDB(courses, vendor) {
     var totalStudents = 0;
     var totalCourses = courses.length;
     var now = moment().utc();
+    console.log(courses.length);
     _.each(courses, function(element, index, list) {
-        if (typeof element.students === 'string') {
-            element.students = parseInt(element.students);
-        }
-        if (element.url === null || element.url === undefined) {
-            console.log('this course has no url somehow: ' + element);
+        if (element === undefined) {
+            console.log('somehow element is undefined.');
         } else {
-            var existingCourse = existingCourses[element.url];
-            totalStudents += parseInt(element.students);
-            if (existingCourse === undefined) {
-                element.vendor = vendor;
-                element.createdAt = now.toDate();
-                element.lastModifiedAt = now.toDate();
-                Courses.insert(element);
-                console.log('inserting a new record to db.');
-            } else {
-                Courses.update(existingCourse, {$set: {
-                    students: element.students,
-                    length: element.length,
-                    lastModifiedAt: now.toDate(),
-                    latest_update: element.latest_update
-                }});
-                console.log('updating a record in db.');
+            if (element.students === null || element.students === undefined) {
+                element.students = 0;
+            } else if (typeof element.students === 'string') {
+                element.students = parseInt(element.students);
             }
+            if (element.url === null || element.url === undefined) {
+                console.log('this course has no url somehow: ' + element.name + " " + element.students);
+            } else {
+                var existingCourse = existingCourses[element.url];
+                totalStudents += parseInt(element.students);
+                if (existingCourse === undefined) {
+                    element.vendor = vendor;
+                    element.createdAt = now.toDate();
+                    element.lastModifiedAt = now.toDate();
+                    Courses.insert(element);
+                    console.log('inserting a new record to db.');
+                } else {
+                    Courses.update(existingCourse, {$set: {
+                        students: element.students,
+                        length: element.length,
+                        lastModifiedAt: now.toDate(),
+                        latest_update: element.latest_update
+                    }});
+                    console.log('updating a record in db.');
+                }
 
-            updateCourseHistory(element);
+                updateCourseHistory(element);
+            }
         }
     });
 

@@ -3,7 +3,7 @@
         <div class="col-md-2"><a href="{{url}}" target="_blank" ><img src="{{thumbnail}}" class="img-thumbnail"></a></div>
         <div class="col-md-6">
             <h4><a href="{{url}}" target="_blank">{{name}} 【{{vendor}}】</a> - {{students}}学生</h4>
-            <p>{{latest_update}}&nbsp;{{length}}&nbsp;<b>难度:</b> {{difficulty}} <b>教师:</b> <a href="{{teacher_link}}" target="_blank">{{teacher}}</a></p>
+            <p>{{latest_update}}&nbsp;{{length}}&nbsp;<b>难度:</b> {{difficulty}} {{#if teacher}}<b>教师:</b> <a href="{{teacher_link}}" target="_blank">{{teacher}}</a>{{/if}}</p>
             <p>{{short_desc}}</p>
         </div>
     </div>
