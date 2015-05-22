@@ -1,18 +1,22 @@
 SyncedCron.add({
     name: 'daily get mooc site stats',
     schedule: function(parser) {
-        // parser is a later.parse object, to start everyday at 12am UTC, which is 8am Beijing Time
-        return parser.text('at 0:00 am');
+        // parser is a later.parse object, to start everyday at 11pm UTC, which is 7am Beijing Time
+        return parser.text('at 23:00 pm');
     },
     job: function() {
         console.log('start running cron job');
-        for (key in rawVendorsList) {
-            var url = rawVendorsList[key];
-            updateStat(key, url);
-        }
+        refreshStats();
         generateCharts();
     }
 });
+
+function refreshStats() {
+    for (key in rawVendorsList) {
+        var url = rawVendorsList[key];
+        updateStat(key, url);
+    }
+}
 
 var highchart_chart = {
     plotBackgroundColor: null,
@@ -158,6 +162,14 @@ function updateStat(key, url) {
 }
 
 Meteor.methods({
+    refreshStats: function() {
+        console.log('start refreshing server data');
+        refreshStats();
+    },
+    recalCharts: function() {
+        console.log('start recalculating charts');
+        generateCharts();
+    },
     fetchFromService: function(vendorname) {
         var url = "http://menus.zmenu.com/parsehub/{vendor}.api.json";
         if (vendorname === '慕课网') {
