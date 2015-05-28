@@ -103,6 +103,7 @@ function generateCharts() {
         for (key in datasets1) {
             newcourseChart.data.series.push(datasets1[key]);
         }
+        newcourseChart.data.title.text = '每日新增课程数';
         newcourseChart.data.tooltip.valueSuffix = '新课程';
 
         VendorCharts.upsert({charttype: newcourseChart.charttype, range: newcourseChart.range, type: newcourseChart.type}, newcourseChart);
