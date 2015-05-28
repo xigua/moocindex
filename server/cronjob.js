@@ -2,7 +2,7 @@ SyncedCron.add({
     name: 'daily get mooc site stats',
     schedule: function(parser) {
         // parser is a later.parse object, to start everyday at 11pm UTC, which is 7am Beijing Time
-        return parser.text('at 0:52 am');
+        return parser.text('at 0:00 am');
     },
     job: function() {
         console.log('start running cron job');
